@@ -5,16 +5,19 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = 5000;
 
 
 //midleware
 app.use(cors());
 app.use(express.json());
 
+// username:online_tutor_db
+// password:dqaSlmWxT9ovnwYI
 
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.d4sj3.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
+
+const uri = `mongodb+srv://Online_tutor_db:r85fdfEbv94DF1GV@cluster0.x7jh2zf.mongodb.net/?retryWrites=true&w=majority`;
 //console.log(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
@@ -33,11 +36,11 @@ console.log('successfully connected');
 async function run() {
     try {
         await client.connect();
-        // console.log('connected successfully');
-        const database = client.db("Bike-zone");
+        console.log('connected successfully');
+        const database = client.db("Online_tutor");
         const eventscollection = database.collection("Bikes-info");
         const bookingcollection = database.collection("Bike-Booking");
-        const usersCollection = database.collection("users");
+        const studentCollection = database.collection("Student");
         const rattingCollection = database.collection("ratting");
 
         app.get('/events', async (req, res) => {
@@ -67,9 +70,14 @@ async function run() {
         })
 
         app.post('/booking', async (req, res) => {
-            const booking = req.body;
+            // const booking = req.body;
+            const doc = {
+                name:"Zillur",
+                Dep:database.eventscollection.createIndex( { "Dep": "CSE" }, { unique: true } )
+            }
+            database.eventscollection.createIndex( { "Dep": 1 }, { unique: true } )
             //console.log('post method is hitted', booking);
-            const result = await bookingcollection.insertOne(booking);
+            const result = await bookingcollection.insertOne(doc);
             console.log(result);
             res.json(result);
         })
@@ -130,11 +138,11 @@ async function run() {
             const user = req.body;
             const requester = req.decodedEmail;
             if (requester) {
-                const requesterAccount = await usersCollection.findOne({ email: requester });
+                const requesterAccount = await studentCollection.findOne({ email: requester });
                 if (requesterAccount.role === 'admin') {
                     const filter = { email: user.email };
                     const updateDoc = { $set: { role: 'admin' } };
-                    const result = await usersCollection.updateOne(filter, updateDoc);
+                    const result = await studentCollection.updateOne(filter, updateDoc);
                     res.json(result);
                 }
             }
@@ -148,7 +156,7 @@ async function run() {
         app.get('/users/:email', async (req, res) => {
             const email = req.params.email;
             const query = { email: email };
-            const user = await usersCollection.findOne(query);
+            const user = await studentCollection.findOne(query);
             let isAdmin = false;
             if (user?.role === 'admin') {
                 isAdmin = true;
@@ -162,14 +170,14 @@ async function run() {
             console.log('from server', user);
             const filter = { email: user.email };
             const updateDoc = { $set: { role: 'admin' } };
-            const result = await usersCollection.updateOne(filter, updateDoc);
+            const result = await studentCollection.updateOne(filter, updateDoc);
             res.json(result);
         })
 
 
         app.post('/users', async (req, res) => {
             const user = req.body;
-            const result = await usersCollection.insertOne(user);
+            const result = await studentCollection.insertOne(user);
             console.log(result);
             res.json(result);
         });
@@ -181,7 +189,7 @@ async function run() {
             const filter = { email: user.email };
             const options = { upsert: true };
             const updateDoc = { $set: user };
-            const result = await usersCollection.updateOne(filter, updateDoc, options);
+            const result = await studentCollection.updateOne(filter, updateDoc, options);
             res.json(result);
         });
 
@@ -200,41 +208,41 @@ async function run() {
             res.json(result);
         })
 
+        // online tutor code start from here
 
-        /* app.post('/users', async (req, res) => {
-            const user = req.body;
-            const result = await usersCollection.insertOne(user);
-            console.log(result);
-            res.json(result);
-        }); */
-
-        /*   
-         app.post('/events', async (req, res) => {
-            const service = req.body;
-            console.log('server is hitting', service);
-    
-            const result = await servicescollection.insertOne(service);
-            console.log(`A document was inserted with the _id: ${result.insertedId}`);
+        app.post('/students', async (req, res) => {
+            const student = req.body;
+            // const doc = {
+            //     name:"Zillur",
+            //     Dep:"CSE"
+            // }
+            // database.eventscollection.createIndex( { "Dep": 1 }, { unique: true } )
+            //console.log('post method is hitted', booking);
+            const result = await studentCollection.insertOne(student);
+            // console.log(result);
             res.json(result);
         })
-    
-        app.delete('/services/:id', async (req, res) => {
-            const id = req.params.id;
-            console.log('delete is hitted by ', id);
-            const query = { _id: ObjectId(id) };
-            const result = await servicescollection.deleteOne(query);
-            res.json(result);
+
+         app.get('/studentlogin', async (req, res) => {
+            const email= req.query.email;
+            const password = req.query.password;
+            console.log("my emaiol is",email);
+            // const email = req.params.email;
+            const query = { email: email };
+            // const query = { email: "zillury@gmail.com" };
+            // const password = student.password;
+            const user = await studentCollection.findOne(query);
+            // res.json(user)
+           
+            if (user?.password === password) {
+                res.status(200).json({ data: user});
+               
+            }
+            else{
+                res.status(200).json({ data: []});
+            }
+            
         })
-    
-        app.get('/services/:id', async (req, res) => {
-            console.log('getting the service');
-            const id = req.params.id;
-            // console.log('getting the services of ', id);
-            const query = { _id: ObjectId(id) };
-            const result = await servicescollection.findOne(query);
-            console.log(result)
-            res.json(result);
-        }) */
 
     } finally {
         //await client.close();
